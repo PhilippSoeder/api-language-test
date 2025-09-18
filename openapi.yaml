@@ -1,0 +1,229 @@
+openapi: 3.0.3
+info:
+  title: API Language Test
+  version: 1.0.0
+  description: |
+    Read-only API that returns per-ID values enriched with language-specific descriptions and units.
+    - Language is negotiated via the `Accept-Language` request header.
+    - Response headers include `Content-Language`, `Vary: Accept-Language`, and `Cache-Control`.
+    - Authentication via opaque Bearer token.
+servers:
+  - url: https://api.example.com
+    description: Production
+  - url: http://localhost:8000
+    description: Local
+security:
+  - bearerAuth: []
+paths:
+  /v1/items/{id}:
+    get:
+      summary: Get item data with localized descriptions and units
+      operationId: getItem
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Item identifier (exactly 4 lowercase letters or digits)
+          schema:
+            type: string
+            pattern: "^[a-z0-9]{4}$"
+            example: id01
+        - name: Accept-Language
+          in: header
+          required: false
+          description: >
+            Preferred languages per RFC 9110, e.g. `de-DE,de;q=0.9,en;q=0.8`. Entries with `q=0` are ignored.
+          schema:
+            type: string
+            example: de-DE,de;q=0.9,en;q=0.8
+      responses:
+        "200":
+          description: OK
+          headers:
+            Content-Type:
+              schema:
+                type: string
+                example: application/json
+            Content-Language:
+              description: Language actually used to localize descriptions
+              schema:
+                type: string
+                example: de
+            Vary:
+              description: Indicates that the response varies by Accept-Language
+              schema:
+                type: string
+                example: Accept-Language
+            Cache-Control:
+              description: Cache policy (default `public, max-age=300`)
+              schema:
+                type: string
+                example: public, max-age=300
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ItemResponse"
+              examples:
+                success:
+                  value:
+                    id: id01
+                    language: de
+                    list-attribute:
+                      - key: key1
+                        description: Beschreibung 1
+                        value: "value1"
+                        unit: m
+                      - key: key2
+                        description: Beschreibung 2
+                        value: "42"
+                        unit: kg
+                      - key: key3
+                        description: Beschreibung 3
+                        value: "true"
+                        unit: null
+        "400":
+          description: Bad Request (invalid id)
+          headers:
+            Content-Type:
+              schema:
+                type: string
+                example: application/json
+            Content-Language:
+              schema:
+                type: string
+                example: en
+            Vary:
+              schema:
+                type: string
+                example: Accept-Language
+            Cache-Control:
+              schema:
+                type: string
+                example: public, max-age=300
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                invalidId:
+                  value:
+                    code: 400
+                    message: "invalid id: must be exactly 4 chars [a-z0-9]"
+        "404":
+          description: Not Found
+          headers:
+            Content-Type:
+              schema:
+                type: string
+                example: application/json
+            Content-Language:
+              schema:
+                type: string
+                example: en
+            Vary:
+              schema:
+                type: string
+                example: Accept-Language
+            Cache-Control:
+              schema:
+                type: string
+                example: public, max-age=300
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                notFound:
+                  value:
+                    code: 404
+                    message: not found
+        "500":
+          description: Internal Server Error
+          headers:
+            Content-Type:
+              schema:
+                type: string
+                example: application/json
+            Content-Language:
+              schema:
+                type: string
+                example: en
+            Vary:
+              schema:
+                type: string
+                example: Accept-Language
+            Cache-Control:
+              schema:
+                type: string
+                example: public, max-age=300
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                serverError:
+                  value:
+                    code: 500
+                    message: internal server error
+                    correlation_id: "f54a2e98-2d9f-4e3c-bd2a-8c0c3d3b07ac"
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: opaque
+  schemas:
+    ItemResponse:
+      type: object
+      required: [id, language, list-attribute]
+      properties:
+        id:
+          type: string
+          description: Item identifier
+          example: id01
+        language:
+          type: string
+          description: Normalized language code used in the response (usually base language)
+          example: de
+        list-attribute:
+          type: array
+          description: List of attributes with localized descriptions, values, and units
+          items:
+            $ref: "#/components/schemas/ListAttributeItem"
+    ListAttributeItem:
+      type: object
+      required: [key]
+      properties:
+        key:
+          type: string
+          description: Attribute key
+          example: key1
+        description:
+          type: string
+          nullable: true
+          description: Localized description (may be null if not available)
+          example: Beschreibung 1
+        value:
+          type: string
+          nullable: true
+          description: Attribute value as a string (may be null if not available)
+          example: "value1"
+        unit:
+          type: string
+          nullable: true
+          description: Unit for the value (may be null if not defined)
+          example: m
+    ErrorResponse:
+      type: object
+      required: [code, message]
+      properties:
+        code:
+          type: integer
+          example: 400
+        message:
+          type: string
+          example: "invalid id: must be exactly 4 chars [a-z0-9]"
+        correlation_id:
+          type: string
+          description: Present for 500 errors to help correlate logs
+          example: f54a2e98-2d9f-4e3c-bd2a-8c0c3d3b07ac

@@ -38,6 +38,13 @@ It loads data, descriptions, and units from JSON files, supports multiple langua
 
 ---
 
+## OpenAPI Specification
+
+This API is fully described using an [OpenAPI 3.0.3 specification](./openapi.yaml).  
+You can use it to generate clients, documentation, or mock servers with tools like Swagger UI, Redoc, or Postman.
+
+---
+
 ## Example
 
 A request with `item_id="id01"` and `Accept-Language="de-DE"` returns:
@@ -177,28 +184,3 @@ In production, the same logic can be used with:
 - **S3** (or AWS AppConfig) for translations and units.  
 
 Caching, validation, and response behavior remain the same.
-
-
----
-
-## Request Flow
-
-```mermaid
-sequenceDiagram
-    participant C as Client
-    participant API as API (Lambda)
-    participant D as Data (DynamoDB / data/*.json)
-    participant I as Descriptions (S3 / i18n/*.json)
-    participant U as Units (S3 / units.json)
-
-    C->>API: Request (id, Accept-Language)
-    API->>API: Validate ID & Parse Accept-Language
-    API->>I: Load descriptions (cached)
-    API->>U: Load units (cached)
-    API->>D: Load data (cached or DynamoDB)
-    D-->>API: Values
-    I-->>API: Descriptions
-    U-->>API: Units
-    API->>C: Response (200/400/404/500)
-```
-
