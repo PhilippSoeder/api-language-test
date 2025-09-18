@@ -1,17 +1,8 @@
 {
-    "id": "id02",
-    "data-list": [
-        {
-            "key": "key1",
-            "value": "value1"
-        },
-        {
-            "key": "key2",
-            "value": "value2"
-        },
-        {
-            "key": "key3",
-            "value": "value3"
+    "id": "id01",
+    "data": {
+            "key1": "value1",
+            "key2": "value2",
+            "key3": "value3"
         }
-    ]
 }
