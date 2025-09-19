@@ -7,14 +7,14 @@ import uuid
 from typing import Optional, Dict, Any, List, Tuple
 
 # --- Config ---
+# Directories for data and i18n files (relative to working dir)
 DATA_PREFIX = os.environ.get("DATA_PREFIX", "data")
 I18N_PREFIX = os.environ.get("I18N_PREFIX", "i18n")
+
+# Default language (if no Accept-Language or no match)
 DEFAULT_LANG = os.environ.get("DEFAULT_LANG", "en")
-
-DESC_CACHE_TTL_SECONDS = int(os.environ.get("DESC_CACHE_TTL_SECONDS", "1200"))  # 20 min
-DATA_CACHE_TTL_SECONDS = int(os.environ.get("DATA_CACHE_TTL_SECONDS", "600"))  # 10 min
-UNITS_CACHE_TTL_SECONDS = int(os.environ.get("UNITS_CACHE_TTL_SECONDS", "86400"))  # 24 h
-
+# Supported languages (comma-separated, e.g., "en,de,fr")
+# Note: DEFAULT_LANG should be in this set.
 SUPPORTED_LANGS = set((os.environ.get("SUPPORTED_LANGS", "en,de,fr")).split(","))
 
 # Optional canonical ordering for output; comma-separated keys in desired order
@@ -24,10 +24,14 @@ CANON_KEYS = [k for k in os.environ.get("CANON_KEYS", "").split(",") if k]
 # Units file (single global file, language-agnostic)
 UNITS_FILE = os.environ.get("UNITS_FILE", "units/units.json")
 
-# Response caching control (tweak per your needs)
-# e.g., "no-store", or "public, max-age=300"
-RESPONSE_CACHE_CONTROL = os.environ.get("RESPONSE_CACHE_CONTROL", "public, max-age=300")
-
+# --- Limits ---
+# Limits for Accept-Language parsing
+MAX_LANG_HEADER_LEN = int(os.environ.get("MAX_LANG_HEADER_LEN", "512"))
+MAX_LANG_ENTRIES = int(os.environ.get("MAX_LANG_ENTRIES", "12"))
+# Cache TTLs (in seconds)
+DESC_CACHE_TTL_SECONDS = int(os.environ.get("DESC_CACHE_TTL_SECONDS", "1200"))  # 20 min
+DATA_CACHE_TTL_SECONDS = int(os.environ.get("DATA_CACHE_TTL_SECONDS", "600"))  # 10 min
+UNITS_CACHE_TTL_SECONDS = int(os.environ.get("UNITS_CACHE_TTL_SECONDS", "86400"))  # 24 h
 # Bounded cache sizes (reasonable defaults)
 MAX_DATA_CACHE_ENTRIES = int(os.environ.get("MAX_DATA_CACHE_ENTRIES", "1000"))
 MAX_MISS_CACHE_ENTRIES = int(os.environ.get("MAX_MISS_CACHE_ENTRIES", "5000"))
@@ -49,6 +53,10 @@ _DESC_LOCK = threading.Lock()
 _DATA_LOCK = threading.Lock()
 _UNITS_LOCK = threading.Lock()
 _MISS_LOCK = threading.Lock()
+
+# Response caching control
+# e.g., "no-store", or "public, max-age=300"
+RESPONSE_CACHE_CONTROL = os.environ.get("RESPONSE_CACHE_CONTROL", "public, max-age=300")
 
 # --- ID validation ---
 # exactly 4 characters, lowercase a-z or digits 0-9
@@ -87,11 +95,6 @@ def _bounded_put(
         if len(cache) >= max_entries:
             cache.pop(next(iter(cache)))
         cache[key] = value
-
-
-# --- Helpers ---
-MAX_LANG_HEADER_LEN = int(os.environ.get("MAX_LANG_HEADER_LEN", "512"))
-MAX_LANG_ENTRIES = int(os.environ.get("MAX_LANG_ENTRIES", "12"))
 
 
 def negotiate_language(accept_language_header: str) -> str:
